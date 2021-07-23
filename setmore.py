@@ -40,6 +40,7 @@ def flask():
         #log messages sent by client
         print("Message from {}: {}".format(twilio_num, message_body))
         if "drop" in message_body.lower():
+            switch = False
             today = datetime.date.today().strftime("%d-%m-%Y")
             setmore_key = requests.get("https://developer.setmore.com/api/v1/bookingapi/appointments?startDate={}&endDate={}&customerDetails=true" .format(today, today), headers = access_token())
             try:
@@ -51,7 +52,9 @@ def flask():
                             #Cancels appointment
                             if label != "Cancelled":
                                 print("Cancelling appointment for {}".format(twilio_num))
-                                resp.message("Your appointment has been cancelled, if you believe this was a mistake please call 604-588-8667.")
+                                if switch == False:
+                                    resp.message("Your appointment has been cancelled, if you believe this was a mistake please call 604-588-8667.")
+                                    switch = True
                                 requests.put("https://developer.setmore.com/api/v1/bookingapi/appointments/{}/label" .format(setmore_key.json()['data']['appointments'][x]['key']), params = {"label": "Cancelled"}, headers = access_token())
                     except:
                         pass
@@ -60,6 +63,7 @@ def flask():
         if "bag" in message_body.lower():
             resp.message("If you're getting nail extensions (fake nails) we will charge $3 for a new file and buffer. This bag will be yours to keep for future appointments!")
         if "confirm" in message_body.lower():
+            switch = False
             today = datetime.date.today().strftime("%d-%m-%Y")
             setmore_key = requests.get("https://developer.setmore.com/api/v1/bookingapi/appointments?startDate={}&endDate={}&customerDetails=true" .format(today, today), headers = access_token())
             #Need to add forloop and match twilio_num to appointments (done)
@@ -69,10 +73,12 @@ def flask():
                         setmore_num = {'cell_phone':setmore_key.json()['data']['appointments'][x]['customer']['cell_phone']}
                         if setmore_num["cell_phone"] == twilio_num:
                             label = setmore_key.json()['data']['appointments'][x]['label']
-                            if label != "Confirmed" and label != "Cancelled":
+                            if label != "Confirmed" and label != "Cancelled" and switch == False:
                                 resp.message('Thank you! Book with us again at:\nfusionbeauty.setmore.com/services\nIf applicable bring a file and buffer. Unsure what that means? Reply with, "bag"')
-                            if label == "Cancelled":
+                                switch = True
+                            if label == "Cancelled" and switch == False:
                                 resp.message("You have already cancelled your appointment, please call 604-588-8667 to resolve this issue.")
+                                switch = True
                             if label == "No Label":
                                 requests.put("https://developer.setmore.com/api/v1/bookingapi/appointments/{}/label" .format(setmore_key.json()['data']['appointments'][x]['key']), params = {"label": "Confirmed"}, headers = access_token())
                     except:
