@@ -93,7 +93,7 @@ def send_appointments():
         #Get today's date, initalize other variables
         today = datetime.date.today().strftime("%d-%m-%Y")
         appointments = requests.get("https://developer.setmore.com/api/v1/bookingapi/appointments?startDate={}&endDate={}&customerDetails=true" .format(today, today), headers = access_token())
-        print("Sending out notifications!")
+        print("Sending out notifications! at {}.".format(today))
 
         #Forloop through appointments
         for x in range(len(appointments.json()['data']['appointments'])):
