@@ -101,14 +101,14 @@ def send_appointments():
             time = datetime.datetime.strptime(time, "%H:%M").strftime("%I:%M %p")
             try:
                 message = client.messages.create(
-                    body = 'Fusion Beauty: Your appointment is at {}, please reply with, "confirm" to confirm, or, "drop" to cancel it. To stop receiving messages, reply with, "cancel".'.format(time),
+                    body = 'Fusion Beauty: Your appointment is at {}, reply with, "confirm" to confirm, or, "drop" to cancel it. To stop receiving messages reply with, "cancel".'.format(time),
                     from_ = "{}".format(data['twilio']['phone_num']),
                     to = "+1{}".format(appointments.json()['data']['appointments'][x]['customer']['cell_phone']),
                 )
             except:
                 pass
 def timer():
-    while True:
+    while True: 
         run_pending()
         time.sleep(1)
 threading.Thread(target=timer).start()
