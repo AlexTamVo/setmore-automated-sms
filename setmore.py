@@ -60,9 +60,9 @@ def flask():
                         pass
             except:
                 pass
-        if "bag" in message_body.lower():
+        elif "bag" in message_body.lower():
             resp.message("If you're getting nail extensions (fake nails) we will charge $3 for a new file and buffer. This bag will be yours to keep for future appointments!")
-        if "confirm" in message_body.lower():
+        elif "confirm" in message_body.lower():
             switch = False
             today = datetime.date.today().strftime("%d-%m-%Y")
             setmore_key = requests.get("https://developer.setmore.com/api/v1/bookingapi/appointments?startDate={}&endDate={}&customerDetails=true" .format(today, today), headers = access_token())
@@ -74,7 +74,7 @@ def flask():
                         if setmore_num["cell_phone"] == twilio_num:
                             label = setmore_key.json()['data']['appointments'][x]['label']
                             if label != "Confirmed" and label != "Cancelled" and switch == False:
-                                resp.message('Thank you! Book with us again at:\nfusionbeauty.setmore.com/services\nIf applicable bring a file and buffer. Unsure what that means? Reply with, "bag"')
+                                resp.message('''Thank you! Reminder that we charge for a new bag, unsure what that means? Reply with, "bag"\n Book with us again at:\nfusionbeauty.setmore.com/services''')
                                 switch = True
                             if label == "Cancelled" and switch == False:
                                 resp.message("You have already cancelled your appointment, please call 604-588-8667 to resolve this issue.")
@@ -85,6 +85,8 @@ def flask():
                         pass
             except:
                 pass
+        else:
+            resp.message("Sorry! I do not understand that command, if you need assistance please call me.")
         return str(resp)
     app.run(debug=False)
 
@@ -107,9 +109,16 @@ def send_appointments():
                 )
             except:
                 pass
+def manual_start():
+    while True:
+        start = input("Type in, 'start' to manually send out notifications.\n")
+        if start == "start":
+            print("Notifications sucessfully sent out")
+            send_appointments()
 def timer():
     while True: 
         run_pending()
         time.sleep(1)
 threading.Thread(target=timer).start()
 threading.Thread(target=flask).start()
+threading.Thread(target=manual_start).start()
