@@ -38,7 +38,7 @@ def flask():
         message_body = request.form['Body']
         twilio_num = request.form['From'].split("+1", 1)[1]
         #log messages sent by client
-        print("Message from {}: {}".format(twilio_num, message_body))
+        print("Message from {}: {}\n".format(twilio_num, message_body))
         if "drop" in message_body.lower():
             switch = False
             today = datetime.date.today().strftime("%d-%m-%Y")
@@ -57,8 +57,10 @@ def flask():
                                     switch = True
                                 requests.put("https://developer.setmore.com/api/v1/bookingapi/appointments/{}/label" .format(setmore_key.json()['data']['appointments'][x]['key']), params = {"label": "Cancelled"}, headers = access_token())
                     except:
+                        #Pass exception when the appointment has no phone number
                         pass
             except:
+                #Pass exception when the appointment has been deleted at the same time - Does not affect functionality
                 pass
         elif "bag" in message_body.lower():
             resp.message("If you're getting nail extensions (fake nails) we will charge $3 for a new file and buffer. This bag will be yours to keep for future appointments!")
@@ -70,6 +72,7 @@ def flask():
             try:
                 for x in range(len(setmore_key.json()['data']['appointments'])):
                     try:
+                        #Dictionary was the only way to compare these values together on line 75
                         setmore_num = {'cell_phone':setmore_key.json()['data']['appointments'][x]['customer']['cell_phone']}
                         if setmore_num["cell_phone"] == twilio_num:
                             label = setmore_key.json()['data']['appointments'][x]['label']
@@ -82,11 +85,23 @@ def flask():
                             if label == "No Label":
                                 requests.put("https://developer.setmore.com/api/v1/bookingapi/appointments/{}/label" .format(setmore_key.json()['data']['appointments'][x]['key']), params = {"label": "Confirmed"}, headers = access_token())
                     except:
+                        #Pass exception for when the appointment has no cell phone number
                         pass
             except:
+                #Most likely due to a scheduled appointment being deleted at the same time - has no actual effect to program.
                 pass
         else:
             resp.message("Sorry! I do not understand that command, if you need assistance please call me.")
+            #Sends the unknown command to business number in config.json.
+            try:
+                message = client.messages.create(
+                    body = "Unknown command received from Twilio: \n{}\n\n{}".format(twilio_num, message_body),
+                    from_ = "{}".format(data['twilio']['phone_num']),
+                    to = "+1{}".format(data['twilio']['business_num'])
+                )
+            except:
+                print("Unknown exception generated from fowarding message to business number. Perhaps the line is down?")
+                pass
         return str(resp)
     app.run(debug=False)
 
@@ -108,12 +123,13 @@ def send_appointments():
                     to = "+1{}".format(appointments.json()['data']['appointments'][x]['customer']['cell_phone']),
                 )
             except:
+                print("Exception generated from sending an appointment reminder - Cause: Deleted appointment or unreachable number.")
                 pass
 def manual_start():
     while True:
         start = input("Type in, 'start' to manually send out notifications.\n")
         if start == "start":
-            print("Notifications sucessfully sent out")
+            print("Notifications successfully sent out")
             send_appointments()
 def timer():
     while True: 
