@@ -3,7 +3,6 @@ import requests
 import datetime
 import json
 import threading
-import multiprocessing
 from schedule import every, repeat, run_pending
 import time
 from tkinter import *
@@ -15,7 +14,7 @@ from twilio.twiml.messaging_response import Message, MessagingResponse
 with open("config/config.json") as json_data_file:
     data = json.load(json_data_file)
 
-#Generate new access token every 5 minutes, due to API rate limits 
+#Generate new access token every 5 minutes
 @repeat(every(5).minutes)
 def refresh_token():
     response = requests.get("https://developer.setmore.com/api/v1/o/oauth2/token?refreshToken={}".format(data['setmore']['refresh_token']))
@@ -58,16 +57,12 @@ def confirm_appointment(appointment_key):
 def cancel_appointment(appointment_key):
     requests.put("https://developer.setmore.com/api/v1/bookingapi/appointments/{}/label" .format(appointment_key), params = {"label": "Cancelled"}, headers = access_token())
 
-#reminder system
-
+#Reminder system
 def flask():
     app = Flask(__name__)
 
     @app.route("/sms", methods=["GET", "POST"])
     def sms_reply():
-        
-
-
         resp = MessagingResponse()
         message_body = request.form['Body']
         twilio_num = request.form['From'].split("+1", 1)[1]
@@ -77,7 +72,7 @@ def flask():
         print("Message from {}: {}\n".format(twilio_num, message_body))
 
 
-        if "drop" in message_body.lower():
+        if "drop" or "cancel" in message_body.lower():
             switch = False
             setmore_appointments = get_appointments()
             setmore_key = get_key()
@@ -88,7 +83,6 @@ def flask():
                     try:
 
                         setmore_num = {'cell_phone':setmore_key.json()['data']['appointments'][x]['customer']['cell_phone']}
-
 
                         if setmore_num["cell_phone"] == twilio_num:
 
@@ -103,7 +97,7 @@ def flask():
                                     switch = True
                                 cancel_appointment(appointment_key)
                     except:
-                        #Phone number doesn't exist in booking info - skip this appointment
+                        #Phone number doesn't exist in booking page - skip this appointment
                         pass
             except:
                 #Exception when appointment is deleted at the same time - doesn't affect program: pass to prevent crash
@@ -124,22 +118,20 @@ def flask():
                 for x in range(len(setmore_key.json()['data']['appointments'])):
                     try:
 
-                        #Dictionary was the only way to compare these values together on line 108
+                        #Dictionary was the only way to compare these values together
                         setmore_num = {'cell_phone':setmore_key.json()['data']['appointments'][x]['customer']['cell_phone']}
 
 
                         if setmore_num["cell_phone"] == twilio_num:
 
-
                             label = setmore_key.json()['data']['appointments'][x]['label']
                             appointment_key = setmore_key.json()['data']['appointments'][x]['key']
-
 
                             if label != "Confirmed" and label != "Cancelled" and switch == False:
                                 resp.message('''Thank you! Reminder that we charge for a new bag, unsure what that means? Reply with, "bag"\n Book with us again at:\nfusionbeauty.setmore.com/services''')
                                 switch = True
                             if label == "Cancelled" and switch == False:
-                                resp.message("You have already cancelled your appointment, please call 604-588-8667 to resolve this issue.")
+                                resp.message("Your appointment has already been cancelled, please call 604-588-8667 to resolve this issue.")
                                 switch = True
                             if label == "No Label":
                                 confirm_appointment(appointment_key)
@@ -175,13 +167,11 @@ def send_appointments():
         setmore_keys = get_key()
         print("\n\nSENDING OUT NOTIFICATIONS at: {}.".format(today))
 
-        #Forloop through appointments
+        #For loop through appointments
         for x in range(len(setmore_keys.json()['data']['appointments'])):
-
 
             time = setmore_keys.json()['data']['appointments'][x]['start_time'].split("T", 1)[1][:-1]
             time = datetime.datetime.strptime(time, "%H:%M").strftime("%I:%M %p")
-
 
             try:
                 message = client.messages.create(
@@ -196,8 +186,8 @@ def send_appointments():
 
 def manual_start():
     while True:
-        start = input("Type in, 'start' to manually send out notifications.\n")
-        if start == "start":
+        console_input = input("Type in, 'start' to manually send out notifications.\n")
+        if console_input == "start":
             print("Notifications successfully sent out")
             send_appointments()
 
